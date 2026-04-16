@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Quản lý sinh viên</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+body {
+    font-family: Arial;
+    background: #f5f7fa;
+    padding: 20px;
+}
+
+h2 {
+    text-align: center;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+input, button {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #45a049;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background: #4CAF50;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background: #f2f2f2;
+}
+
+tr:hover {
+    background: #ddd;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Danh sách sinh viên</h2>
+
+    <div class="controls">
+        <input type="file" id="fileInput">
+        <input type="text" id="search" placeholder="Tìm kiếm tên...">
+        <button onclick="sortByName()">Sắp xếp A-Z</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Họ tên</th>
+                <th>Mã SV</th>
+                <th>Email</th>
+                <th>Khóa</th>
+                <th>Khoa</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+class Student {
+    constructor(fullName, studentId) {
+        this.fullName = fullName;
+        this.studentId = studentId;
+    }
+
+    getNameParts() {
+        return this.fullName.trim().toLowerCase().split(" ");
+    }
+
+    generateEmail() {
+        let parts = this.getNameParts();
+        let lastName = parts[parts.length - 1];
+
+        let initials = "";
+        for (let i = 0; i < parts.length - 1; i++) {
+            initials += parts[i][0];
+        }
+
+        return lastName + initials + "." + this.studentId + "@hvnh.edu.vn";
+    }
+
+    getCourse() {
+        return "K" + this.studentId.substring(0, 2);
+    }
+
+    getFaculty() {
+        let code = this.studentId[2];
+
+        switch(code) {
+            case 'A': return "CNTT";
+            case 'B': return "Kinh tế";
+            case 'C': return "Tài chính";
+            default: return "Khác";
+        }
+    }
+}
+
+let students = [];
+
+// đọc file excel
+fileInput.addEventListener("change", function(e) {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+
+    reader.onload = function(e) {
+        let data = new Uint8Array(e.target.result);
+        let workbook = XLSX.read(data, { type: "array" });
+
+        let sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let json = XLSX.utils.sheet_to_json(sheet);
+
+        students = json.map(row => new Student(row["Họ tên"], row["Mã SV"]));
+        render(students);
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+function render(data) {
+    let tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    data.forEach(st => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${st.fullName}</td>
+            <td>${st.studentId}</td>
+            <td>${st.generateEmail()}</td>
+            <td>${st.getCourse()}</td>
+            <td>${st.getFaculty()}</td>
+        </tr>`;
+    });
+}
+
+// tìm kiếm
+search.addEventListener("input", function() {
+    let keyword = this.value.toLowerCase();
+    let filtered = students.filter(s => s.fullName.toLowerCase().includes(keyword));
+    render(filtered);
+});
+
+// sắp xếp
+function sortByName() {
+    students.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    render(students);
+}
+</script>
+
+</body>
+</html>
